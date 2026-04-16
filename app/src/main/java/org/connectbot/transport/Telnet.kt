@@ -38,6 +38,9 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.SocketException
 import java.net.SocketTimeoutException
+import javax.net.ssl.SSLSocket
+import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.SSLHandshakeException
 import java.net.UnknownHostException
 import java.util.regex.Pattern
 
@@ -114,10 +117,21 @@ class Telnet : AbsTransport {
 
     override fun connect() {
         try {
-            socket = Socket()
+            val baseSocket = Socket()
 
             val currentHost = host ?: return
-            tryAllAddresses(socket!!, currentHost.hostname, currentHost.port, currentHost.ipVersion)
+            tryAllAddresses(baseSocket!!, currentHost.hostname, currentHost.port, currentHost.ipVersion)
+
+            val sslSocketFactory = SSLSocketFactory.getDefault() as SSLSocketFactory
+
+            socket = sslSocketFactory.createSocket(
+              baseSocket,
+              currentHost.hostname,
+              currentHost.port,
+              true
+            ) as SSLSocket
+
+            (socket as SSLSocket).startHandshake()
 
             connected = true
 
@@ -125,6 +139,9 @@ class Telnet : AbsTransport {
             os = socket?.getOutputStream()
 
             bridge?.onConnected()
+        } catch (e: SSLHandshakeException) {
+            Timber.e(e, "Erreur lors de la négociation SSL/TLS")
+            throw e
         } catch (e: UnknownHostException) {
             Timber.d(e, "IO Exception connecting to host")
             throw e
