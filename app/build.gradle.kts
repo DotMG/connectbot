@@ -50,6 +50,8 @@ android {
             libs.versions.targetSdk
                 .get()
                 .toInt()
+        versionCode 1
+        versionName "1.10.1"
 
         vectorDrawables.useSupportLibrary = true
 
